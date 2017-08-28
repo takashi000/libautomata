@@ -27,40 +27,75 @@ int func_automata(struct struct_automata *p)
 #endif
 
 #if !DFA
-static int _func_automata(struct struct_automata *, char, int, int);
-
+static int _func_automata(struct struct_automata *);
 int func_automata(struct struct_automata *p)
 {
 	p->automata.func_set_current(p, p->symbol.func_get_init_n(p));
-	return _func_automata(p, p->automata.func_get_tape(p), p->automata.func_get_current(p), 0);
+	return _func_automata(p);
 }
 #if DEBUG
 #include <stdio.h>
 #endif
-static int _func_automata(struct struct_automata *p, char c1, int n1, int k)
+#define STACK_MAX	512
+#undef graph_progress
+#define graph_progress(p, stack, sp, n, n2)\
+	p->automata.func_set_current(p, n2);\
+	p->automata.func_progress_tape(p);\
+	if(sp < STACK_MAX){\
+		stack[sp++][0]	= n;\
+	}\
+	else return 0
+#undef graph_back
+#define graph_back(p, stack, sp, n) \
+	if(sp >= 0){\
+		stack[sp][1]	= 0;\
+		n	= stack[--sp][0];\
+		stack[sp][1]++;\
+		p->automata.func_set_current(p, n);\
+		p->automata.func_back_tape(p);\
+	}\
+	else return 0
+
+static int _func_automata(struct struct_automata *p)
 {
 	int i;
-	char c2;
-	int n2;
+	char c1, c2;
+	int n1, n2, n3;
+	int stack[STACK_MAX][2];
+	int sp=0;
+
+	for(i = 0; i < STACK_MAX; i++)
+		stack[i][1]	= 0;
+	do{
 #if DEBUG
-	printf("k1:%d(%d, %c)\n", k, p->automata.func_get_current(p), p->automata.func_get_tape(p));
-	getchar();
+		int j;
+		printf("[%d]:(%d)(%d, %s)\n", sp, stack[sp][1], p->automata.func_get_current(p), p->automata.tape_p);
+		printf("[ ");
+		for(j = 0; j < sp; j++) printf("%d ", stack[j][0]);
+		printf("]\n");
+		getchar();
 #endif
-	if(!p->automata.func_is_end(p)){
-		for(i = 0; (c2 = p->move_function.func_get_dinput(p, i)) != '\0'; i++){
-			n2	= p->move_function.func_get_dstat_n(p, i);
-			if(c1 == c2 && n1 == n2){
-				if((p->move_function.func_get_dmove_n(p, i, k)) < 0) k--;
-				p->automata.func_set_current(p, p->move_function.func_get_dmove_n(p, i, k));
-				p->automata.func_progress_tape(p);
-				_func_automata(p, p->automata.func_get_tape(p), p->automata.func_get_current(p), k);
-				if(p->automata.func_is_accept(p) && p->automata.func_is_end(p)) return 1;
-				p->automata.func_set_current(p, p->move_function.func_get_dmove_n(p, i, k - 1));
-				p->automata.func_back_tape(p);
-				_func_automata(p, p->automata.func_get_tape(p), p->automata.func_get_current(p), k + 1);
+		if(p->automata.func_is_end(p)){
+			if(p->automata.func_is_accept(p)) return 1;
+			graph_back(p, stack, sp, n3);
+		}else{
+			c1 	= p->automata.func_get_tape(p);
+			n1	= p->automata.func_get_current(p);
+			for(i = 0; (c2 = p->move_function.func_get_dinput(p, i)) != '\0'; i++){
+				n2	= p->move_function.func_get_dstat_n(p, i);
+				if(c1 == c2 && n1 == n2){
+					n3	=  p->move_function.func_get_dmove_n(p, i, stack[sp][1]);
+					if(n3 >= 0){
+						graph_progress(p, stack, sp, n1, n3);
+					}else{
+						graph_back(p, stack, sp, n3);
+					}
+					break;
+				}
 			}
 		}
-	}
-	return p->automata.func_is_accept(p);
+	}while(sp >= 0);
+
+	return 0;
 }
 #endif
