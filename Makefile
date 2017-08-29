@@ -1,7 +1,7 @@
 CC=cc
 TARGET=libautomata.so
 OBJ=automata.o func_common.o func_fa.o
-CFLAGS= -O3 -fPIC
+CFLAGS= -g -glldb -O3 -fPIC
 
 ALL: $(TARGET)
 $(TARGET): $(OBJ)

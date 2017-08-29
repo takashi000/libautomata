@@ -1,6 +1,7 @@
 #ifndef __AUTOMATA_H_
 #define __AUTOMATA_H_
 
+#define AUTOMATA_EMPTY -1
 #define AUTOMATA_MEM_PAGE	4096
 #define AUTOMATA_ENDM	'$'
 
